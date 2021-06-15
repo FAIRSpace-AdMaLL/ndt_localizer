@@ -227,6 +227,7 @@ void NdtLocalizer::callback_pointcloud(
     is_converged = false;
     ++skipping_publish_num;
     std::cout << "Not Converged" << std::endl;
+
   } else {
     skipping_publish_num = 0;
   }
@@ -242,7 +243,14 @@ void NdtLocalizer::callback_pointcloud(
   std::cout<<"delta yaw: "<<delta_euler(0) << " pitch: "<<delta_euler(1)<<
              " roll: "<<delta_euler(2)<<std::endl;
 
-  pre_trans = result_pose_matrix;
+  // if the robot is estimated to be faster than 10m/s ignore the registeration result
+  if(delta_translation.norm()>1.0) {
+    is_converged = false;
+    delta_trans.setIdentity();
+  }
+  if(is_converged) {
+    pre_trans = result_pose_matrix;
+  }
 
   // publish pose message
   geometry_msgs::PoseStamped result_pose_stamped_msg;
@@ -253,10 +261,14 @@ void NdtLocalizer::callback_pointcloud(
   if (is_converged) {
     ndt_pose_pub_.publish(result_pose_stamped_msg);
   }
-
   
   // publish tf
-  const Eigen::Matrix4f map_to_odom_matrix = result_pose_matrix * (odom_to_base_matrix.inverse());
+  Eigen::Matrix4f map_to_odom_matrix = result_pose_matrix * (odom_to_base_matrix.inverse());
+  
+  if(!is_converged) {
+    map_to_odom_matrix = pre_corr_trans;
+  }
+
   Eigen::Affine3d map_to_odom_affine;
   map_to_odom_affine.matrix() = map_to_odom_matrix.cast<double>();
   const geometry_msgs::Pose result_pose_msg2 = tf2::toMsg(map_to_odom_affine);
@@ -268,6 +280,8 @@ void NdtLocalizer::callback_pointcloud(
   result_pose_stamped_msg2.pose = result_pose_msg2;
 
   publish_tf(map_frame_, odom_frame_, result_pose_stamped_msg2);
+  
+  pre_corr_trans = map_to_odom_matrix;
 
   // publish aligned point cloud
   pcl::PointCloud<pcl::PointXYZ>::Ptr sensor_points_mapTF_ptr(new pcl::PointCloud<pcl::PointXYZ>);

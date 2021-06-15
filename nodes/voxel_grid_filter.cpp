@@ -4,6 +4,7 @@
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/filters/voxel_grid.h>
+#include <pcl/filters/extract_indices.h>
 
 #include "points_downsampler.h"
 
@@ -43,6 +44,37 @@ static void scan_callback(const sensor_msgs::PointCloud2::ConstPtr& input)
     voxel_grid_filter.setLeafSize(voxel_leaf_size, voxel_leaf_size, voxel_leaf_size);
     voxel_grid_filter.setInputCloud(scan_ptr);
     voxel_grid_filter.filter(*filtered_scan_ptr);
+
+    // define the heading direction
+    pcl::PointXYZ x_axis(1,0,0);
+
+    // keep front view points
+    pcl::PointIndices::Ptr front_index(new pcl::PointIndices());
+    pcl::ExtractIndices<pcl::PointXYZ> extract;
+
+    ROS_INFO("before filtering %i", (*filtered_scan_ptr).size());
+
+    for(int i=0; i<(*filtered_scan_ptr).size(); i++) {
+      auto point = filtered_scan_ptr->points[i];
+      double mod = sqrt(point.x*point.x + point.y*point.y);
+      point.x /= mod;
+      point.y /= mod;
+      double angle = acos(point.x*x_axis.x + point.y*x_axis.y);
+      // std::cout << "angle: " << angle << std::endl;
+
+      if(abs(angle)>M_PI/180.0*60) {
+        front_index->indices.push_back(i);
+        //std::cout << "added ";
+      }
+    }
+
+    extract.setInputCloud(filtered_scan_ptr);
+    extract.setIndices(front_index);
+    extract.setNegative(true);
+    extract.filter(*filtered_scan_ptr);
+
+    ROS_INFO("after filtering %i", (*filtered_scan_ptr).size());
+
     pcl::toROSMsg(*filtered_scan_ptr, filtered_msg);
   }
   else

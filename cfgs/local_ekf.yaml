@@ -18,7 +18,7 @@ imu0_differential: true
 
 
 two_d_mode: false
-publish_tf: false
+publish_tf: true
 
 odom_frame: odom
 base_link_frame: base_link

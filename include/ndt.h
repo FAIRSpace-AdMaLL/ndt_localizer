@@ -55,7 +55,7 @@ private:
     tf2_ros::TransformBroadcaster tf2_broadcaster_;
 
     Eigen::Matrix4f base_to_sensor_matrix_;
-    Eigen::Matrix4f pre_trans, delta_trans;
+    Eigen::Matrix4f pre_trans, delta_trans, pre_corr_trans;
     bool init_pose = false;
 
     std::string base_frame_;
