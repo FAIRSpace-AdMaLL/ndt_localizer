@@ -45,6 +45,7 @@ static void scan_callback(const sensor_msgs::PointCloud2::ConstPtr& input)
     voxel_grid_filter.setInputCloud(scan_ptr);
     voxel_grid_filter.filter(*filtered_scan_ptr);
 
+    
     // define the heading direction
     pcl::PointXYZ x_axis(1,0,0);
 
@@ -73,7 +74,7 @@ static void scan_callback(const sensor_msgs::PointCloud2::ConstPtr& input)
     extract.setNegative(true);
     extract.filter(*filtered_scan_ptr);
 
-    ROS_INFO("after filtering %i", (*filtered_scan_ptr).size());
+    ROS_INFO("after filtering %i", (*filtered_scan_ptr).size()); 
 
     pcl::toROSMsg(*filtered_scan_ptr, filtered_msg);
   }

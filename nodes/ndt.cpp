@@ -1,6 +1,7 @@
 #include "ndt.h"
 
-NdtLocalizer::NdtLocalizer(ros::NodeHandle &nh, ros::NodeHandle &private_nh):nh_(nh), private_nh_(private_nh), tf2_listener_(tf2_buffer_){
+NdtLocalizer::NdtLocalizer(ros::NodeHandle &nh, ros::NodeHandle &private_nh) : nh_(nh), private_nh_(private_nh), tf2_listener_(tf2_buffer_)
+{
 
   key_value_stdmap_["state"] = "Initializing";
   init_params();
@@ -17,6 +18,7 @@ NdtLocalizer::NdtLocalizer(ros::NodeHandle &nh, ros::NodeHandle &private_nh):nh_
   initial_pose_sub_ = nh_.subscribe("initialpose", 100, &NdtLocalizer::callback_init_pose, this);
   map_points_sub_ = nh_.subscribe("points_map", 1, &NdtLocalizer::callback_pointsmap, this);
   sensor_points_sub_ = nh_.subscribe("filtered_points", 1, &NdtLocalizer::callback_pointcloud, this);
+  odom_sub_ = nh_.subscribe("odom", 10, &NdtLocalizer::callback_odom, this);
 
   diagnostic_thread_ = std::thread(&NdtLocalizer::timer_diagnostic, this);
   diagnostic_thread_.detach();
@@ -24,15 +26,32 @@ NdtLocalizer::NdtLocalizer(ros::NodeHandle &nh, ros::NodeHandle &private_nh):nh_
 
 NdtLocalizer::~NdtLocalizer() {}
 
+void NdtLocalizer::getRPYfromMat(const Eigen::Matrix4f mat, Pose &p)
+{
+  Eigen::Vector3f translation = mat.block<3, 1>(0, 3);
+
+  Eigen::Matrix3f rotation_matrix = mat.block<3, 3>(0, 0);
+  Eigen::Vector3f euler = rotation_matrix.eulerAngles(0, 1, 2);
+
+  p.x = translation(0);
+  p.y = translation(1);
+  p.z = translation(2);
+  p.roll = euler(0);
+  p.pitch = euler(1);
+  p.yaw = euler(2);
+}
+
 void NdtLocalizer::timer_diagnostic()
 {
   ros::Rate rate(100);
-  while (ros::ok()) {
+  while (ros::ok())
+  {
     diagnostic_msgs::DiagnosticStatus diag_status_msg;
     diag_status_msg.name = "ndt_scan_matcher";
     diag_status_msg.hardware_id = "";
 
-    for (const auto & key_value : key_value_stdmap_) {
+    for (const auto &key_value : key_value_stdmap_)
+    {
       diagnostic_msgs::KeyValue key_value_msg;
       key_value_msg.key = key_value.first;
       key_value_msg.value = key_value.second;
@@ -41,19 +60,22 @@ void NdtLocalizer::timer_diagnostic()
 
     diag_status_msg.level = diagnostic_msgs::DiagnosticStatus::OK;
     diag_status_msg.message = "";
-    if (key_value_stdmap_.count("state") && key_value_stdmap_["state"] == "Initializing") {
+    if (key_value_stdmap_.count("state") && key_value_stdmap_["state"] == "Initializing")
+    {
       diag_status_msg.level = diagnostic_msgs::DiagnosticStatus::WARN;
       diag_status_msg.message += "Initializing State. ";
     }
     if (
-      key_value_stdmap_.count("skipping_publish_num") &&
-      std::stoi(key_value_stdmap_["skipping_publish_num"]) > 1) {
+        key_value_stdmap_.count("skipping_publish_num") &&
+        std::stoi(key_value_stdmap_["skipping_publish_num"]) > 1)
+    {
       diag_status_msg.level = diagnostic_msgs::DiagnosticStatus::WARN;
       diag_status_msg.message += "skipping_publish_num > 1. ";
     }
     if (
-      key_value_stdmap_.count("skipping_publish_num") &&
-      std::stoi(key_value_stdmap_["skipping_publish_num"]) >= 5) {
+        key_value_stdmap_.count("skipping_publish_num") &&
+        std::stoi(key_value_stdmap_["skipping_publish_num"]) >= 5)
+    {
       diag_status_msg.level = diagnostic_msgs::DiagnosticStatus::ERROR;
       diag_status_msg.message += "skipping_publish_num exceed limit. ";
     }
@@ -69,20 +91,24 @@ void NdtLocalizer::timer_diagnostic()
 }
 
 void NdtLocalizer::callback_init_pose(
-  const geometry_msgs::PoseWithCovarianceStamped::ConstPtr & initial_pose_msg_ptr)
+    const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &initial_pose_msg_ptr)
 {
-  if (initial_pose_msg_ptr->header.frame_id == map_frame_) {
+  if (initial_pose_msg_ptr->header.frame_id == map_frame_)
+  {
     initial_pose_cov_msg_ = *initial_pose_msg_ptr;
-  } else {
+  }
+  else
+  {
+
     // get TF from pose_frame to map_frame
     geometry_msgs::TransformStamped::Ptr TF_pose_to_map_ptr(new geometry_msgs::TransformStamped);
     get_transform(map_frame_, initial_pose_msg_ptr->header.frame_id, TF_pose_to_map_ptr);
 
-    std::cout<<"initial pose frame if" << initial_pose_msg_ptr->header.frame_id<<std::endl;
+    std::cout << "initial pose frame if" << initial_pose_msg_ptr->header.frame_id << std::endl;
 
     // transform pose_frame to map_frame
     geometry_msgs::PoseWithCovarianceStamped::Ptr mapTF_initial_pose_msg_ptr(
-    new geometry_msgs::PoseWithCovarianceStamped);
+        new geometry_msgs::PoseWithCovarianceStamped);
     tf2::doTransform(*initial_pose_msg_ptr, *mapTF_initial_pose_msg_ptr, *TF_pose_to_map_ptr);
     // mapTF_initial_pose_msg_ptr->header.stamp = initial_pose_msg_ptr->header.stamp;
     initial_pose_cov_msg_ = *mapTF_initial_pose_msg_ptr;
@@ -92,7 +118,7 @@ void NdtLocalizer::callback_init_pose(
 }
 
 void NdtLocalizer::callback_pointsmap(
-  const sensor_msgs::PointCloud2::ConstPtr & map_points_msg_ptr)
+    const sensor_msgs::PointCloud2::ConstPtr &map_points_msg_ptr)
 {
   const auto trans_epsilon = ndt_.getTransformationEpsilon();
   const auto step_size = ndt_.getStepSize();
@@ -120,8 +146,19 @@ void NdtLocalizer::callback_pointsmap(
   ndt_map_mtx_.unlock();
 }
 
+void NdtLocalizer::callback_odom(const nav_msgs::Odometry::ConstPtr &odom_msg)
+{
+
+  geometry_msgs::Pose odom_pose_msg = odom_msg->pose.pose;
+
+  Eigen::Vector3f t(odom_pose_msg.position.x, odom_pose_msg.position.y, odom_pose_msg.position.z);
+  odom_trans.block<3, 1>(0, 3) = t;
+  Eigen::Quaternionf q(odom_pose_msg.orientation.w, odom_pose_msg.orientation.x, odom_pose_msg.orientation.y, odom_pose_msg.orientation.z);
+  odom_trans.block<3, 3>(0, 0) = q.toRotationMatrix();
+}
+
 void NdtLocalizer::callback_pointcloud(
-  const sensor_msgs::PointCloud2::ConstPtr & sensor_points_sensorTF_msg_ptr)
+    const sensor_msgs::PointCloud2::ConstPtr &sensor_points_sensorTF_msg_ptr)
 {
   const auto exe_start_time = std::chrono::system_clock::now();
   // mutex Map
@@ -131,7 +168,7 @@ void NdtLocalizer::callback_pointcloud(
   const auto sensor_ros_time = sensor_points_sensorTF_msg_ptr->header.stamp;
 
   boost::shared_ptr<pcl::PointCloud<pcl::PointXYZ>> sensor_points_sensorTF_ptr(
-    new pcl::PointCloud<pcl::PointXYZ>);
+      new pcl::PointCloud<pcl::PointXYZ>);
 
   pcl::fromROSMsg(*sensor_points_sensorTF_msg_ptr, *sensor_points_sensorTF_ptr);
 
@@ -142,71 +179,73 @@ void NdtLocalizer::callback_pointcloud(
   const Eigen::Affine3d odom_to_base_affine = tf2::transformToEigen(*TF_odom_to_base_ptr);
   const Eigen::Matrix4f odom_to_base_matrix = odom_to_base_affine.matrix().cast<float>();
 
-
   boost::shared_ptr<pcl::PointCloud<pcl::PointXYZ>> sensor_points_baselinkTF_ptr(
-    new pcl::PointCloud<pcl::PointXYZ>);
-  pcl::transformPointCloud(
-    *sensor_points_sensorTF_ptr, *sensor_points_baselinkTF_ptr, base_to_sensor_matrix_);
-  
-  // set input point cloud
-  ndt_.setInputSource(sensor_points_baselinkTF_ptr);
+      new pcl::PointCloud<pcl::PointXYZ>);
 
-  if (ndt_.getInputTarget() == nullptr) {
-    ROS_WARN_STREAM_THROTTLE(1, "No MAP!");
-    return;
-  }
-  // align
-  Eigen::Matrix4f initial_pose_matrix;
-  if (!init_pose){
-    Eigen::Affine3d initial_pose_affine;
-    tf2::fromMsg(initial_pose_cov_msg_.pose.pose, initial_pose_affine);
-    initial_pose_matrix = initial_pose_affine.matrix().cast<float>();
-    // for the first time, we don't know the pre_trans, so just use the init_trans, 
-    // which means, the delta trans for the second time is 0
-    pre_trans = initial_pose_matrix;
-
+  // get the sensor offset to the base_link
+  if (!init_pose)
+  {
     // get TF base to sensor
     geometry_msgs::TransformStamped::Ptr TF_base_to_sensor_ptr(new geometry_msgs::TransformStamped);
     get_transform(base_frame_, sensor_frame, TF_base_to_sensor_ptr);
 
     const Eigen::Affine3d base_to_sensor_affine = tf2::transformToEigen(*TF_base_to_sensor_ptr);
     base_to_sensor_matrix_ = base_to_sensor_affine.matrix().cast<float>();
+  }
+
+  pcl::transformPointCloud(
+      *sensor_points_sensorTF_ptr, *sensor_points_baselinkTF_ptr, base_to_sensor_matrix_);
+
+  // set input point cloud
+  ndt_.setInputSource(sensor_points_baselinkTF_ptr);
+
+  if (ndt_.getInputTarget() == nullptr)
+  {
+    ROS_WARN_STREAM_THROTTLE(1, "No MAP!");
+    return;
+  }
+  // align
+  Eigen::Matrix4f initial_pose_matrix;
+  if (!init_pose)
+  {
+    Eigen::Affine3d initial_pose_affine;
+    tf2::fromMsg(initial_pose_cov_msg_.pose.pose, initial_pose_affine);
+    initial_pose_matrix = initial_pose_affine.matrix().cast<float>();
+    // for the first time, we don't know the pre_trans, so just use the init_trans,
+    // which means, the delta trans for the second time is 0
+    pre_trans = initial_pose_matrix;
+
+    odom_trans.setIdentity();
+    pre_odom_trans = odom_trans;
+    map_to_odom_matrix.setIdentity();
+
+    std::cout << "not initialised!" << std::endl;
 
     init_pose = true;
-  }else
+  }
+  else
   {
     // use predicted pose as init guess (currently we only impl linear model)
-    initial_pose_matrix = pre_trans * delta_trans;
-    /*geometry_msgs::TransformStamped::Ptr TF_base_to_map_ptr(new geometry_msgs::TransformStamped);
-    bool is_available = get_transform(map_frame_, base_frame_, TF_base_to_map_ptr, sensor_ros_time);
+    //initial_pose_matrix = pre_trans * delta_trans;
+    initial_pose_matrix = map_to_odom_matrix * odom_trans;
 
-    if(is_available) {
-      ROS_INFO("found transform");
-      const Eigen::Affine3d base_to_map_affine = tf2::transformToEigen(*TF_base_to_map_ptr);
-      initial_pose_matrix = base_to_map_affine.matrix().cast<float>();
-    }
-    else {
-      ROS_ERROR("cannot found transform");
-      initial_pose_matrix = pre_trans * delta_trans;
-    }
+    // calculate the delta tf from pre_trans to current_trans
+    Eigen::Matrix4f delta_trans2 = pre_trans.inverse() * initial_pose_matrix;
 
-    Eigen::Vector3f init_translation = initial_pose_matrix.block<3, 1>(0, 3);
-    std::cout<<"intial x: "<<init_translation(0) << " y: "<<init_translation(1)<<
-             " z: "<<init_translation(2)<<std::endl;
+    Eigen::Vector3f delta_translation2 = delta_trans2.block<3, 1>(0, 3);
 
-    Eigen::Matrix3f init_rotation_matrix = initial_pose_matrix.block<3, 3>(0, 0);
-    Eigen::Vector3f init_euler = init_rotation_matrix.eulerAngles(2,1,0);
-    std::cout<<"intial yaw: "<<init_euler(0) << " pitch: "<<init_euler(1)<<
-              " roll: "<<init_euler(2)<<std::endl;*/
+    Eigen::Matrix3f delta_rotation_matrix2 = delta_trans2.block<3, 3>(0, 0);
+    Eigen::Vector3f delta_euler2 = delta_rotation_matrix2.eulerAngles(2, 1, 0);
+    std::cout << "inital delta trans residual " << delta_translation2.norm() << " rotation yaw residual " << std::min(std::abs(float(M_PI)-delta_euler2(0)), std::abs(delta_euler2(0))) << std::endl;
   }
-  
+
   pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud(new pcl::PointCloud<pcl::PointXYZ>);
   const auto align_start_time = std::chrono::system_clock::now();
   key_value_stdmap_["state"] = "Aligning";
   ndt_.align(*output_cloud, initial_pose_matrix);
   key_value_stdmap_["state"] = "Sleeping";
   const auto align_end_time = std::chrono::system_clock::now();
-  const double align_time = std::chrono::duration_cast<std::chrono::microseconds>(align_end_time - align_start_time).count() /1000.0;
+  const double align_time = std::chrono::duration_cast<std::chrono::microseconds>(align_end_time - align_start_time).count() / 1000.0;
 
   const Eigen::Matrix4f result_pose_matrix = ndt_.getFinalTransformation();
   Eigen::Affine3d result_pose_affine;
@@ -222,33 +261,44 @@ void NdtLocalizer::callback_pointcloud(
   bool is_converged = true;
   static size_t skipping_publish_num = 0;
   if (
-    iteration_num >= ndt_.getMaximumIterations() + 2 ||
-    transform_probability < converged_param_transform_probability_) {
+      iteration_num >= ndt_.getMaximumIterations() + 2 ||
+      transform_probability < converged_param_transform_probability_)
+  {
     is_converged = false;
     ++skipping_publish_num;
     std::cout << "Not Converged" << std::endl;
-
-  } else {
+  }
+  else
+  {
     skipping_publish_num = 0;
   }
   // calculate the delta tf from pre_trans to current_trans
   delta_trans = pre_trans.inverse() * result_pose_matrix;
 
   Eigen::Vector3f delta_translation = delta_trans.block<3, 1>(0, 3);
-  std::cout<<"delta x: "<<delta_translation(0) << " y: "<<delta_translation(1)<<
-             " z: "<<delta_translation(2)<<std::endl;
+  std::cout << "delta x: " << delta_translation(0) << " y: " << delta_translation(1) << " z: " << delta_translation(2) << std::endl;
 
   Eigen::Matrix3f delta_rotation_matrix = delta_trans.block<3, 3>(0, 0);
-  Eigen::Vector3f delta_euler = delta_rotation_matrix.eulerAngles(2,1,0);
-  std::cout<<"delta yaw: "<<delta_euler(0) << " pitch: "<<delta_euler(1)<<
-             " roll: "<<delta_euler(2)<<std::endl;
+  Eigen::Vector3f delta_euler = delta_rotation_matrix.eulerAngles(2, 1, 0);
+  std::cout << "delta yaw: " << delta_euler(0) << " pitch: " << delta_euler(1) << " roll: " << delta_euler(2) << std::endl;
+
+  // calculate the delta tf from pre_trans to current_trans
+  Eigen::Matrix4f delta_trans1 = initial_pose_matrix.inverse() * result_pose_matrix;
+
+  Eigen::Vector3f delta_translation1 = delta_trans1.block<3, 1>(0, 3);
+
+  Eigen::Matrix3f delta_rotation_matrix1 = delta_trans1.block<3, 3>(0, 0);
+  Eigen::Vector3f delta_euler1 = delta_rotation_matrix1.eulerAngles(2, 1, 0);
+  std::cout << "registeration delta trans residual " << delta_translation1.norm() << " rotation yaw residual " << std::min(std::abs(float(M_PI)-delta_euler1(0)), std::abs(delta_euler1(0))) << std::endl;
 
   // if the robot is estimated to be faster than 10m/s ignore the registeration result
-  if(delta_translation.norm()>1.0) {
+  if (delta_translation.norm() > 10.0 && transform_probability < converged_param_transform_probability_)
+  {
     is_converged = false;
     delta_trans.setIdentity();
   }
-  if(is_converged) {
+  if (is_converged)
+  {
     pre_trans = result_pose_matrix;
   }
 
@@ -258,14 +308,16 @@ void NdtLocalizer::callback_pointcloud(
   result_pose_stamped_msg.header.frame_id = map_frame_;
   result_pose_stamped_msg.pose = result_pose_msg;
 
-  if (is_converged) {
+  if (is_converged)
+  {
     ndt_pose_pub_.publish(result_pose_stamped_msg);
   }
-  
+
   // publish tf
-  Eigen::Matrix4f map_to_odom_matrix = result_pose_matrix * (odom_to_base_matrix.inverse());
-  
-  if(!is_converged) {
+  map_to_odom_matrix = result_pose_matrix * (odom_to_base_matrix.inverse());
+
+  if (!is_converged)
+  {
     map_to_odom_matrix = pre_corr_trans;
   }
 
@@ -280,19 +332,18 @@ void NdtLocalizer::callback_pointcloud(
   result_pose_stamped_msg2.pose = result_pose_msg2;
 
   publish_tf(map_frame_, odom_frame_, result_pose_stamped_msg2);
-  
+
   pre_corr_trans = map_to_odom_matrix;
 
   // publish aligned point cloud
   pcl::PointCloud<pcl::PointXYZ>::Ptr sensor_points_mapTF_ptr(new pcl::PointCloud<pcl::PointXYZ>);
   pcl::transformPointCloud(
-    *sensor_points_baselinkTF_ptr, *sensor_points_mapTF_ptr, result_pose_matrix);
+      *sensor_points_baselinkTF_ptr, *sensor_points_mapTF_ptr, result_pose_matrix);
   sensor_msgs::PointCloud2 sensor_points_mapTF_msg;
   pcl::toROSMsg(*sensor_points_mapTF_ptr, sensor_points_mapTF_msg);
   sensor_points_mapTF_msg.header.stamp = sensor_ros_time;
   sensor_points_mapTF_msg.header.frame_id = map_frame_;
   sensor_aligned_pose_pub_.publish(sensor_points_mapTF_msg);
-
 
   std_msgs::Float32 exe_time_msg;
   exe_time_msg.data = exe_time;
@@ -319,7 +370,8 @@ void NdtLocalizer::callback_pointcloud(
   std::cout << "skipping_publish_num: " << skipping_publish_num << std::endl;
 }
 
-void NdtLocalizer::init_params(){
+void NdtLocalizer::init_params()
+{
 
   private_nh_.getParam("base_frame", base_frame_);
   ROS_INFO("base_frame_id: %s", base_frame_.c_str());
@@ -343,19 +395,19 @@ void NdtLocalizer::init_params(){
   ndt_.setMaximumIterations(max_iterations);
 
   ROS_INFO(
-    "trans_epsilon: %lf, step_size: %lf, resolution: %lf, max_iterations: %d", trans_epsilon,
-    step_size, resolution, max_iterations);
+      "trans_epsilon: %lf, step_size: %lf, resolution: %lf, max_iterations: %d", trans_epsilon,
+      step_size, resolution, max_iterations);
 
   private_nh_.getParam(
-    "converged_param_transform_probability", converged_param_transform_probability_);
+      "converged_param_transform_probability", converged_param_transform_probability_);
 }
 
-
 bool NdtLocalizer::get_transform(
-  const std::string & target_frame, const std::string & source_frame,
-  const geometry_msgs::TransformStamped::Ptr & transform_stamped_ptr, const ros::Time & time_stamp)
+    const std::string &target_frame, const std::string &source_frame,
+    const geometry_msgs::TransformStamped::Ptr &transform_stamped_ptr, const ros::Time &time_stamp)
 {
-  if (target_frame == source_frame) {
+  if (target_frame == source_frame)
+  {
     transform_stamped_ptr->header.stamp = time_stamp;
     transform_stamped_ptr->header.frame_id = target_frame;
     transform_stamped_ptr->child_frame_id = source_frame;
@@ -369,10 +421,13 @@ bool NdtLocalizer::get_transform(
     return true;
   }
 
-  try {
+  try
+  {
     *transform_stamped_ptr =
-      tf2_buffer_.lookupTransform(target_frame, source_frame, time_stamp, ros::Duration(1.0));
-  } catch (tf2::TransformException & ex) {
+        tf2_buffer_.lookupTransform(target_frame, source_frame, time_stamp, ros::Duration(1.0));
+  }
+  catch (tf2::TransformException &ex)
+  {
     ROS_WARN("%s", ex.what());
     ROS_ERROR("Please publish TF %s to %s", target_frame.c_str(), source_frame.c_str());
 
@@ -392,10 +447,11 @@ bool NdtLocalizer::get_transform(
 }
 
 bool NdtLocalizer::get_transform(
-  const std::string & target_frame, const std::string & source_frame,
-  const geometry_msgs::TransformStamped::Ptr & transform_stamped_ptr)
+    const std::string &target_frame, const std::string &source_frame,
+    const geometry_msgs::TransformStamped::Ptr &transform_stamped_ptr)
 {
-  if (target_frame == source_frame) {
+  if (target_frame == source_frame)
+  {
     transform_stamped_ptr->header.stamp = ros::Time::now();
     transform_stamped_ptr->header.frame_id = target_frame;
     transform_stamped_ptr->child_frame_id = source_frame;
@@ -409,10 +465,13 @@ bool NdtLocalizer::get_transform(
     return true;
   }
 
-  try {
+  try
+  {
     *transform_stamped_ptr =
-      tf2_buffer_.lookupTransform(target_frame, source_frame, ros::Time(0), ros::Duration(1.0));
-  } catch (tf2::TransformException & ex) {
+        tf2_buffer_.lookupTransform(target_frame, source_frame, ros::Time(0), ros::Duration(1.0));
+  }
+  catch (tf2::TransformException &ex)
+  {
     ROS_WARN("%s", ex.what());
     ROS_ERROR("Please publish TF %s to %s", target_frame.c_str(), source_frame.c_str());
 
@@ -432,8 +491,8 @@ bool NdtLocalizer::get_transform(
 }
 
 void NdtLocalizer::publish_tf(
-  const std::string & frame_id, const std::string & child_frame_id,
-  const geometry_msgs::PoseStamped & pose_msg)
+    const std::string &frame_id, const std::string &child_frame_id,
+    const geometry_msgs::PoseStamped &pose_msg)
 {
   geometry_msgs::TransformStamped transform_stamped;
   transform_stamped.header.frame_id = frame_id;
@@ -454,16 +513,15 @@ void NdtLocalizer::publish_tf(
   tf2_broadcaster_.sendTransform(transform_stamped);
 }
 
-
 int main(int argc, char **argv)
 {
-    ros::init(argc, argv, "ndt_localizer");
-    ros::NodeHandle nh;
-    ros::NodeHandle private_nh("~");
+  ros::init(argc, argv, "ndt_localizer");
+  ros::NodeHandle nh;
+  ros::NodeHandle private_nh("~");
 
-    NdtLocalizer ndt_localizer(nh, private_nh);
+  NdtLocalizer ndt_localizer(nh, private_nh);
 
-    ros::spin();
+  ros::spin();
 
-    return 0;
+  return 0;
 }

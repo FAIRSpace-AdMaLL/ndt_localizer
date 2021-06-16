@@ -28,6 +28,15 @@
 #include <pcl_ros/point_cloud.h>
 #include <pcl_ros/transforms.h>
 
+struct Pose {
+    double x;
+    double y;
+    double z;
+    double roll;
+    double pitch;
+    double yaw;
+};
+
 class NdtLocalizer{
 public:
 
@@ -40,6 +49,7 @@ private:
     ros::Subscriber initial_pose_sub_;
     ros::Subscriber map_points_sub_;
     ros::Subscriber sensor_points_sub_;
+    ros::Subscriber odom_sub_;
 
     ros::Publisher sensor_aligned_pose_pub_;
     ros::Publisher ndt_pose_pub_;
@@ -55,6 +65,8 @@ private:
     tf2_ros::TransformBroadcaster tf2_broadcaster_;
 
     Eigen::Matrix4f base_to_sensor_matrix_;
+    Eigen::Matrix4f odom_trans, pre_odom_trans;
+    Eigen::Matrix4f map_to_odom_matrix;
     Eigen::Matrix4f pre_trans, delta_trans, pre_corr_trans;
     bool init_pose = false;
 
@@ -87,5 +99,8 @@ private:
     void callback_pointsmap(const sensor_msgs::PointCloud2::ConstPtr & pointcloud2_msg_ptr);
     void callback_init_pose(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr & pose_conv_msg_ptr);
     void callback_pointcloud(const sensor_msgs::PointCloud2::ConstPtr & pointcloud2_msg_ptr);
+    void callback_odom(const nav_msgs::Odometry::ConstPtr & odom_msg_ptr);
+
+    void getRPYfromMat(const Eigen::Matrix4f mat, Pose & p);
 
 };// NdtLocalizer Core
