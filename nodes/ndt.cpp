@@ -82,7 +82,7 @@ void NdtLocalizer::callback_init_pose(
 
     // transform pose_frame to map_frame
     geometry_msgs::PoseWithCovarianceStamped::Ptr mapTF_initial_pose_msg_ptr(
-      new geometry_msgs::PoseWithCovarianceStamped);
+    new geometry_msgs::PoseWithCovarianceStamped);
     tf2::doTransform(*initial_pose_msg_ptr, *mapTF_initial_pose_msg_ptr, *TF_pose_to_map_ptr);
     // mapTF_initial_pose_msg_ptr->header.stamp = initial_pose_msg_ptr->header.stamp;
     initial_pose_cov_msg_ = *mapTF_initial_pose_msg_ptr;
@@ -134,17 +134,19 @@ void NdtLocalizer::callback_pointcloud(
     new pcl::PointCloud<pcl::PointXYZ>);
 
   pcl::fromROSMsg(*sensor_points_sensorTF_msg_ptr, *sensor_points_sensorTF_ptr);
-  // get TF base to sensor
-  geometry_msgs::TransformStamped::Ptr TF_base_to_sensor_ptr(new geometry_msgs::TransformStamped);
-  get_transform(base_frame_, sensor_frame, TF_base_to_sensor_ptr);
 
-  const Eigen::Affine3d base_to_sensor_affine = tf2::transformToEigen(*TF_base_to_sensor_ptr);
-  const Eigen::Matrix4f base_to_sensor_matrix = base_to_sensor_affine.matrix().cast<float>();
+  // get TF odom to base
+  geometry_msgs::TransformStamped::Ptr TF_odom_to_base_ptr(new geometry_msgs::TransformStamped);
+  get_transform(odom_frame_, base_frame_, TF_odom_to_base_ptr, sensor_ros_time);
+
+  const Eigen::Affine3d odom_to_base_affine = tf2::transformToEigen(*TF_odom_to_base_ptr);
+  const Eigen::Matrix4f odom_to_base_matrix = odom_to_base_affine.matrix().cast<float>();
+
 
   boost::shared_ptr<pcl::PointCloud<pcl::PointXYZ>> sensor_points_baselinkTF_ptr(
     new pcl::PointCloud<pcl::PointXYZ>);
   pcl::transformPointCloud(
-    *sensor_points_sensorTF_ptr, *sensor_points_baselinkTF_ptr, base_to_sensor_matrix);
+    *sensor_points_sensorTF_ptr, *sensor_points_baselinkTF_ptr, base_to_sensor_matrix_);
   
   // set input point cloud
   ndt_.setInputSource(sensor_points_baselinkTF_ptr);
@@ -162,11 +164,40 @@ void NdtLocalizer::callback_pointcloud(
     // for the first time, we don't know the pre_trans, so just use the init_trans, 
     // which means, the delta trans for the second time is 0
     pre_trans = initial_pose_matrix;
+
+    // get TF base to sensor
+    geometry_msgs::TransformStamped::Ptr TF_base_to_sensor_ptr(new geometry_msgs::TransformStamped);
+    get_transform(base_frame_, sensor_frame, TF_base_to_sensor_ptr);
+
+    const Eigen::Affine3d base_to_sensor_affine = tf2::transformToEigen(*TF_base_to_sensor_ptr);
+    base_to_sensor_matrix_ = base_to_sensor_affine.matrix().cast<float>();
+
     init_pose = true;
   }else
   {
     // use predicted pose as init guess (currently we only impl linear model)
     initial_pose_matrix = pre_trans * delta_trans;
+    /*geometry_msgs::TransformStamped::Ptr TF_base_to_map_ptr(new geometry_msgs::TransformStamped);
+    bool is_available = get_transform(map_frame_, base_frame_, TF_base_to_map_ptr, sensor_ros_time);
+
+    if(is_available) {
+      ROS_INFO("found transform");
+      const Eigen::Affine3d base_to_map_affine = tf2::transformToEigen(*TF_base_to_map_ptr);
+      initial_pose_matrix = base_to_map_affine.matrix().cast<float>();
+    }
+    else {
+      ROS_ERROR("cannot found transform");
+      initial_pose_matrix = pre_trans * delta_trans;
+    }
+
+    Eigen::Vector3f init_translation = initial_pose_matrix.block<3, 1>(0, 3);
+    std::cout<<"intial x: "<<init_translation(0) << " y: "<<init_translation(1)<<
+             " z: "<<init_translation(2)<<std::endl;
+
+    Eigen::Matrix3f init_rotation_matrix = initial_pose_matrix.block<3, 3>(0, 0);
+    Eigen::Vector3f init_euler = init_rotation_matrix.eulerAngles(2,1,0);
+    std::cout<<"intial yaw: "<<init_euler(0) << " pitch: "<<init_euler(1)<<
+              " roll: "<<init_euler(2)<<std::endl;*/
   }
   
   pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud(new pcl::PointCloud<pcl::PointXYZ>);
@@ -212,8 +243,8 @@ void NdtLocalizer::callback_pointcloud(
              " roll: "<<delta_euler(2)<<std::endl;
 
   pre_trans = result_pose_matrix;
-  
-  // publish
+
+  // publish pose message
   geometry_msgs::PoseStamped result_pose_stamped_msg;
   result_pose_stamped_msg.header.stamp = sensor_ros_time;
   result_pose_stamped_msg.header.frame_id = map_frame_;
@@ -223,8 +254,20 @@ void NdtLocalizer::callback_pointcloud(
     ndt_pose_pub_.publish(result_pose_stamped_msg);
   }
 
-  // publish tf(map frame to base frame)
-  publish_tf(map_frame_, base_frame_, result_pose_stamped_msg);
+  
+  // publish tf
+  const Eigen::Matrix4f map_to_odom_matrix = result_pose_matrix * (odom_to_base_matrix.inverse());
+  Eigen::Affine3d map_to_odom_affine;
+  map_to_odom_affine.matrix() = map_to_odom_matrix.cast<double>();
+  const geometry_msgs::Pose result_pose_msg2 = tf2::toMsg(map_to_odom_affine);
+
+  // publish tf (map frame to odom frame)
+  geometry_msgs::PoseStamped result_pose_stamped_msg2;
+  result_pose_stamped_msg2.header.stamp = sensor_ros_time;
+  result_pose_stamped_msg2.header.frame_id = map_frame_;
+  result_pose_stamped_msg2.pose = result_pose_msg2;
+
+  publish_tf(map_frame_, odom_frame_, result_pose_stamped_msg2);
 
   // publish aligned point cloud
   pcl::PointCloud<pcl::PointXYZ>::Ptr sensor_points_mapTF_ptr(new pcl::PointCloud<pcl::PointXYZ>);
@@ -278,6 +321,7 @@ void NdtLocalizer::init_params(){
   private_nh_.getParam("max_iterations", max_iterations);
 
   map_frame_ = "map";
+  odom_frame_ = "odom";
 
   ndt_.setTransformationEpsilon(trans_epsilon);
   ndt_.setStepSize(step_size);
@@ -313,7 +357,7 @@ bool NdtLocalizer::get_transform(
 
   try {
     *transform_stamped_ptr =
-      tf2_buffer_.lookupTransform(target_frame, source_frame, time_stamp);
+      tf2_buffer_.lookupTransform(target_frame, source_frame, time_stamp, ros::Duration(1.0));
   } catch (tf2::TransformException & ex) {
     ROS_WARN("%s", ex.what());
     ROS_ERROR("Please publish TF %s to %s", target_frame.c_str(), source_frame.c_str());
