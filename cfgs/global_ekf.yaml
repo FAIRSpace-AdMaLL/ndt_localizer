@@ -1,9 +1,9 @@
 frequency: 50
 
-odom0: /encoder_odom
+odom0: /encoder_odom_cov
 odom0_config: [false, false, false, # x y z
                false, false, false, # r p y
-               true, true, false, # dx dy dz
+               true, true, true, # dx dy dz
                false, false, true, # dr dp dy
                false, false, false]
 odom0_differential: true
@@ -14,9 +14,9 @@ odom1_config: [true,  true,  true,
                 false, false, false,
                 false, false, false,
                 false, false, false]
-odom1_differential: false
+odom1_differential: true
 
-imu0: /imu/data
+imu0: /imu/data_cov
 imu0_config: [false, false, false,  
               true,  true, true,  # r p y
               false, false, false, # dx dy dz
@@ -26,11 +26,12 @@ imu0_differential: true
 
 
 two_d_mode: false
-publish_tf: false
+publish_tf: true
 
-odom_frame: map
+world_frame: map
+map_frame: map
+odom_frame: odom
 base_link_frame: base_link
-map_frame: world
 
 # The values are ordered as x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw, ax, ay, az. 
 process_noise_covariance: [0.05, 0,    0,    0,    0,    0,    0,     0,     0,    0,    0,    0,    0,    0,    0,

@@ -25,11 +25,22 @@
 
        <param name="magnetic_declination_radians" value="0"/>
 
-       <param name="yaw_offset" value="3.05"/>
+       <param name="yaw_offset" value="-1.57"/>
+       <param name="wait_for_datum" value="false"/>
 
        <remap from="/imu/data" to="/imu/data" />
        <remap from="/gps/fix" to="/gnss" />
-       <remap from="/odometry/filtered" to="/odometry/filtered/global" />
+       <remap from="/odometry/filtered" to="/odometry/filtered/local" />
     </node>
+
+    <node pkg="ndt_localizer" type="covar_adder.py" name="covar_adder"/>
+
+    <node pkg="rosbag" type="play" name="player" args="--clock -r 1 -s 0
+         /media/marwan/external_drive/beach_data/day_3_rosbags/beach_day_3_repeat1_2021-06-11-18-23-21.bag
+         --topic /gnss /encoder_odom /imu/data /os_cloud_node/points"/>
+
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find ndt_localizer)/cfgs/jaguar.rviz" />
+
+    <!-- <node pkg="rqt_tf_tree" type="rqt_tf_tree" name="rqt_tf_tree" /> -->
 
 </launch>
