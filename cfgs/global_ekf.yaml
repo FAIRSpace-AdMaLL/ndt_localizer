@@ -14,7 +14,7 @@ odom1_config: [true,  true,  true,
                 false, false, false,
                 false, false, false,
                 false, false, false]
-odom1_differential: true
+odom1_differential: false
 
 imu0: /imu/data_cov
 imu0_config: [false, false, false,  
@@ -25,7 +25,7 @@ imu0_config: [false, false, false,
 imu0_differential: true
 
 
-two_d_mode: false
+two_d_mode: true
 publish_tf: true
 
 world_frame: map
