@@ -10,14 +10,14 @@ imu_pub = rospy.Publisher("/imu/data_cov", Imu, queue_size=10)
 
 
 def odom_callback(odom_msg):
-    odom_msg.twist.covariance = np.diagflat([0.2, 0.2, 0.0, 0.0, 0.0, 1.00]).flatten()
+    odom_msg.twist.covariance = np.diagflat([0.05, 0.05, 0.0, 0.0, 0.0, 0.2]).flatten()
     odom_pub.publish(odom_msg)
 
 
 def imu_callback(imu_msg):
-    imu_msg.orientation_covariance = np.diagflat([0.01, 0.01, 0.3]).flatten()
-    imu_msg.angular_velocity_covariance = np.diagflat([0.01, 0.01, 0.3]).flatten()
-    imu_msg.linear_acceleration_covariance = np.diagflat([0.01, 0.01, 0.01]).flatten()
+    imu_msg.orientation_covariance = np.diagflat([0.017, 0.017, 0.157]).flatten()
+    imu_msg.angular_velocity_covariance = np.diagflat([0.0004, 0.0004, 0.0004]).flatten()
+    imu_msg.linear_acceleration_covariance = np.diagflat([0.0004, 0.0004, 0.0004]).flatten()
     imu_pub.publish(imu_msg)
 
 
