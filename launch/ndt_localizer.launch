@@ -11,7 +11,8 @@
   <arg name="input_map_points_topic" default="/points_map" doc="Map points topic" />
   <arg name="output_pose_topic" default="ndt_pose" doc="Estimated self position" />
   <arg name="output_pose_with_covariance_topic" default="ndt_pose_with_covariance" doc="Estimated self position with covariance" />
-  <arg name="output_diagnostics_topic" default="diagnostics" doc="Diagnostic topic" />
+  <arg name="output_diagnostics_topic" default="diagnostics" doc="Diagnostic topic" />"
+  <arg name="path_file" default="/home/jaguar/jaguar_ws/src/ndt_localizer/map/court_yard_map.csv" doc="Mapping trajectory as height map" />
 
   <include file="$(find ndt_localizer)/launch/static_tf.launch" />
   <include file="$(find ndt_localizer)/launch/map_loader.launch" />
@@ -36,6 +37,7 @@
     <remap from="ndt_pose_with_covariance" to="$(arg output_pose_with_covariance_topic)" />
     <remap from="diagnostics" to="$(arg output_diagnostics_topic)" />
     <param name="base_frame" value="$(arg base_frame)" />
+    <param name="path_file" value="$(arg path_file)"/>
     <param name="trans_epsilon" value="$(arg trans_epsilon)" />
     <param name="step_size" value="$(arg step_size)" />
     <param name="resolution" value="$(arg resolution)" />

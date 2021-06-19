@@ -11,6 +11,7 @@
 #include <diagnostic_msgs/DiagnosticArray.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <geometry_msgs/TwistStamped.h>
+#include <geometry_msgs/PolygonStamped.h>
 #include <nav_msgs/Odometry.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/Imu.h>
@@ -57,6 +58,7 @@ private:
     ros::Publisher transform_probability_pub_;
     ros::Publisher iteration_num_pub_;
     ros::Publisher diagnostics_pub_;
+    ros::Publisher poly_pub_;
 
     pcl::NormalDistributionsTransform<pcl::PointXYZ, pcl::PointXYZ> ndt_;
 
@@ -70,6 +72,8 @@ private:
     Eigen::Matrix4f pre_trans, delta_trans, pre_corr_trans;
     bool init_pose = false;
     bool is_ndt_published = false;
+    std::string path_file;
+    geometry_msgs::PolygonStamped poly;
 
     std::string base_frame_;
     std::string map_frame_;
@@ -103,5 +107,7 @@ private:
     void callback_odom(const nav_msgs::Odometry::ConstPtr & odom_msg_ptr);
 
     void getXYZRPYfromMat(const Eigen::Matrix4f mat, Pose & p);
+    double getNearestHeight(const geometry_msgs::Pose p);
+    bool loadPath(std::string path);
 
 };// NdtLocalizer Core
