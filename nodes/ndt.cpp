@@ -8,7 +8,7 @@ NdtLocalizer::NdtLocalizer(ros::NodeHandle &nh, ros::NodeHandle &private_nh) : n
 
   // Publishers
   sensor_aligned_pose_pub_ = nh_.advertise<sensor_msgs::PointCloud2>("points_aligned", 10);
-  ndt_pose_pub_ = nh_.advertise<geometry_msgs::PoseStamped>("ndt_pose", 10);
+  ndt_pose_pub_ = nh_.advertise<nav_msgs::Odometry>("ndt_pose", 10);
   exe_time_pub_ = nh_.advertise<std_msgs::Float32>("exe_time_ms", 10);
   transform_probability_pub_ = nh_.advertise<std_msgs::Float32>("transform_probability", 10);
   iteration_num_pub_ = nh_.advertise<std_msgs::Float32>("iteration_num", 10);
@@ -26,7 +26,7 @@ NdtLocalizer::NdtLocalizer(ros::NodeHandle &nh, ros::NodeHandle &private_nh) : n
 
 NdtLocalizer::~NdtLocalizer() {}
 
-void NdtLocalizer::getRPYfromMat(const Eigen::Matrix4f mat, Pose &p)
+void NdtLocalizer::getXYZRPYfromMat(const Eigen::Matrix4f mat, Pose &p)
 {
   Eigen::Vector3f translation = mat.block<3, 1>(0, 3);
 
@@ -96,6 +96,7 @@ void NdtLocalizer::callback_init_pose(
   if (initial_pose_msg_ptr->header.frame_id == map_frame_)
   {
     initial_pose_cov_msg_ = *initial_pose_msg_ptr;
+    ROS_INFO("manually clicked");
   }
   else
   {
@@ -148,13 +149,14 @@ void NdtLocalizer::callback_pointsmap(
 
 void NdtLocalizer::callback_odom(const nav_msgs::Odometry::ConstPtr &odom_msg)
 {
+  if(is_ndt_published) {
+    geometry_msgs::Pose odom_pose_msg = odom_msg->pose.pose;
 
-  geometry_msgs::Pose odom_pose_msg = odom_msg->pose.pose;
-
-  Eigen::Vector3f t(odom_pose_msg.position.x, odom_pose_msg.position.y, odom_pose_msg.position.z);
-  odom_trans.block<3, 1>(0, 3) = t;
-  Eigen::Quaternionf q(odom_pose_msg.orientation.w, odom_pose_msg.orientation.x, odom_pose_msg.orientation.y, odom_pose_msg.orientation.z);
-  odom_trans.block<3, 3>(0, 0) = q.toRotationMatrix();
+    Eigen::Vector3f t(odom_pose_msg.position.x, odom_pose_msg.position.y, odom_pose_msg.position.z);
+    odom_trans.block<3, 1>(0, 3) = t;
+    Eigen::Quaternionf q(odom_pose_msg.orientation.w, odom_pose_msg.orientation.x, odom_pose_msg.orientation.y, odom_pose_msg.orientation.z);
+    odom_trans.block<3, 3>(0, 0) = q.toRotationMatrix();
+  }
 }
 
 void NdtLocalizer::callback_pointcloud(
@@ -199,25 +201,23 @@ void NdtLocalizer::callback_pointcloud(
   // set input point cloud
   ndt_.setInputSource(sensor_points_baselinkTF_ptr);
 
-  if (ndt_.getInputTarget() == nullptr)
+  if (ndt_.getInputTarget() == nullptr || !is_ndt_published)
   {
     ROS_WARN_STREAM_THROTTLE(1, "No MAP!");
-    return;
-  }
-  // align
-  Eigen::Matrix4f initial_pose_matrix;
-  if (!init_pose)
-  {
     Eigen::Affine3d initial_pose_affine;
     tf2::fromMsg(initial_pose_cov_msg_.pose.pose, initial_pose_affine);
     initial_pose_matrix = initial_pose_affine.matrix().cast<float>();
+
+    Pose tmp;
+    getXYZRPYfromMat(initial_pose_matrix, tmp);
+    std::cout << "manual initial pose: " << "x: " << tmp.x << " y: " << tmp.y << " z: " << tmp.z << " r: " << tmp.roll << " p: " << tmp.pitch << " y: " << tmp.yaw << std::endl;
+
     // for the first time, we don't know the pre_trans, so just use the init_trans,
     // which means, the delta trans for the second time is 0
     pre_trans = initial_pose_matrix;
-
-    odom_trans.setIdentity();
+    odom_trans = initial_pose_matrix;
     pre_odom_trans = odom_trans;
-    map_to_odom_matrix.setIdentity();
+    map_to_odom_matrix.setIdentity(); // // local odom mode
 
     std::cout << "not initialised!" << std::endl;
 
@@ -225,9 +225,20 @@ void NdtLocalizer::callback_pointcloud(
   }
   else
   {
-    // use predicted pose as init guess (currently we only impl linear model)
-    //initial_pose_matrix = pre_trans * delta_trans;
-    initial_pose_matrix = map_to_odom_matrix * odom_trans;
+    // use predicted pose as init guess
+    //initial_pose_matrix = pre_trans * delta_trans;  // linear prediction mode
+    //initial_pose_matrix = map_to_odom_matrix * odom_trans;  // local odom mode
+
+    Pose tmp;
+    std::string debug;
+    getXYZRPYfromMat(initial_pose_matrix, tmp);
+    std::cout << "initial pose: " << "x: " << tmp.x << " y: " << tmp.y << " z: " << tmp.z << " r: " << tmp.roll << " p: " << tmp.pitch << " y: " << tmp.yaw << std::endl;
+
+
+    initial_pose_matrix = odom_trans; // global odom mode
+
+    getXYZRPYfromMat(initial_pose_matrix, tmp);
+    std::cout << "global pose: " << "x: " << tmp.x << " y: " << tmp.y << " z: " << tmp.z << " r: " << tmp.roll << " p: " << tmp.pitch << " y: " << tmp.yaw << std::endl;
 
     // calculate the delta tf from pre_trans to current_trans
     Eigen::Matrix4f delta_trans2 = pre_trans.inverse() * initial_pose_matrix;
@@ -238,6 +249,7 @@ void NdtLocalizer::callback_pointcloud(
     Eigen::Vector3f delta_euler2 = delta_rotation_matrix2.eulerAngles(2, 1, 0);
     std::cout << "inital delta trans residual " << delta_translation2.norm() << " rotation yaw residual " << std::min(std::abs(float(M_PI)-delta_euler2(0)), std::abs(delta_euler2(0))) << std::endl;
   }
+ 
 
   pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud(new pcl::PointCloud<pcl::PointXYZ>);
   const auto align_start_time = std::chrono::system_clock::now();
@@ -266,7 +278,7 @@ void NdtLocalizer::callback_pointcloud(
   {
     is_converged = false;
     ++skipping_publish_num;
-    std::cout << "Not Converged" << std::endl;
+    ROS_ERROR("Not Converged");
   }
   else
   {
@@ -291,26 +303,35 @@ void NdtLocalizer::callback_pointcloud(
   Eigen::Vector3f delta_euler1 = delta_rotation_matrix1.eulerAngles(2, 1, 0);
   std::cout << "registeration delta trans residual " << delta_translation1.norm() << " rotation yaw residual " << std::min(std::abs(float(M_PI)-delta_euler1(0)), std::abs(delta_euler1(0))) << std::endl;
 
-  // if the robot is estimated to be faster than 10m/s ignore the registeration result
-  if (delta_translation.norm() > 10.0 && transform_probability < converged_param_transform_probability_)
+  // define the variance of ndt localsiation
+  double deviation;
+  if(!is_converged)
   {
-    is_converged = false;
+    deviation = 1000.; //delta_translation.norm();
     delta_trans.setIdentity();
   }
-  if (is_converged)
+  else
   {
     pre_trans = result_pose_matrix;
+    deviation = delta_translation.norm();
   }
 
   // publish pose message
-  geometry_msgs::PoseStamped result_pose_stamped_msg;
+  nav_msgs::Odometry result_pose_stamped_msg;
   result_pose_stamped_msg.header.stamp = sensor_ros_time;
   result_pose_stamped_msg.header.frame_id = map_frame_;
-  result_pose_stamped_msg.pose = result_pose_msg;
+  result_pose_stamped_msg.pose.pose = result_pose_msg;
+  result_pose_stamped_msg.pose.covariance[0] = deviation;
+  result_pose_stamped_msg.pose.covariance[7] = deviation;
+  result_pose_stamped_msg.pose.covariance[14] = deviation;
+  result_pose_stamped_msg.pose.covariance[21] = deviation;
+  result_pose_stamped_msg.pose.covariance[28] = deviation;
+  result_pose_stamped_msg.pose.covariance[35] = deviation;
 
-  if (is_converged)
+  if (is_converged || !is_ndt_published)
   {
     ndt_pose_pub_.publish(result_pose_stamped_msg);
+    is_ndt_published = true;
   }
 
   // publish tf
@@ -326,12 +347,17 @@ void NdtLocalizer::callback_pointcloud(
   const geometry_msgs::Pose result_pose_msg2 = tf2::toMsg(map_to_odom_affine);
 
   // publish tf (map frame to odom frame)
-  geometry_msgs::PoseStamped result_pose_stamped_msg2;
-  result_pose_stamped_msg2.header.stamp = sensor_ros_time;
-  result_pose_stamped_msg2.header.frame_id = map_frame_;
-  result_pose_stamped_msg2.pose = result_pose_msg2;
+  bool is_publish_tf = false;
 
-  publish_tf(map_frame_, odom_frame_, result_pose_stamped_msg2);
+  if(is_publish_tf)
+  {
+    geometry_msgs::PoseStamped result_pose_stamped_msg2;
+    result_pose_stamped_msg2.header.stamp = sensor_ros_time;
+    result_pose_stamped_msg2.header.frame_id = map_frame_;
+    result_pose_stamped_msg2.pose = result_pose_msg2;
+
+    publish_tf(map_frame_, odom_frame_, result_pose_stamped_msg2);
+  }
 
   pre_corr_trans = map_to_odom_matrix;
 

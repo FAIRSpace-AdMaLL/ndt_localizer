@@ -66,9 +66,10 @@ private:
 
     Eigen::Matrix4f base_to_sensor_matrix_;
     Eigen::Matrix4f odom_trans, pre_odom_trans;
-    Eigen::Matrix4f map_to_odom_matrix;
+    Eigen::Matrix4f initial_pose_matrix, map_to_odom_matrix;
     Eigen::Matrix4f pre_trans, delta_trans, pre_corr_trans;
     bool init_pose = false;
+    bool is_ndt_published = false;
 
     std::string base_frame_;
     std::string map_frame_;
@@ -101,6 +102,6 @@ private:
     void callback_pointcloud(const sensor_msgs::PointCloud2::ConstPtr & pointcloud2_msg_ptr);
     void callback_odom(const nav_msgs::Odometry::ConstPtr & odom_msg_ptr);
 
-    void getRPYfromMat(const Eigen::Matrix4f mat, Pose & p);
+    void getXYZRPYfromMat(const Eigen::Matrix4f mat, Pose & p);
 
 };// NdtLocalizer Core

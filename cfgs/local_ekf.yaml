@@ -23,6 +23,7 @@ publish_tf: true
 odom_frame: odom
 base_link_frame: base_link
 map_frame: map
+world_frame: odom
 
 # The values are ordered as x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw, ax, ay, az. 
 process_noise_covariance: [0.005, 0,    0,    0,    0,    0,    0,     0,     0,    0,    0,    0,    0,    0,    0,
