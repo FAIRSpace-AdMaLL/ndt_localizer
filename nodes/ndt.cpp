@@ -13,6 +13,7 @@ NdtLocalizer::NdtLocalizer(ros::NodeHandle &nh, ros::NodeHandle &private_nh) : n
   transform_probability_pub_ = nh_.advertise<std_msgs::Float32>("transform_probability", 10);
   iteration_num_pub_ = nh_.advertise<std_msgs::Float32>("iteration_num", 10);
   diagnostics_pub_ = nh_.advertise<diagnostic_msgs::DiagnosticArray>("diagnostics", 10);
+  poly_pub_ = nh.advertise<geometry_msgs::PolygonStamped>("mapping_path", 1);
 
   // Subscribers
   initial_pose_sub_ = nh_.subscribe("initialpose", 100, &NdtLocalizer::callback_init_pose, this);
@@ -96,7 +97,16 @@ void NdtLocalizer::callback_init_pose(
   if (initial_pose_msg_ptr->header.frame_id == map_frame_)
   {
     initial_pose_cov_msg_ = *initial_pose_msg_ptr;
-    ROS_INFO("manually clicked");
+
+    if (path_file!="")
+    {
+      loadPath(path_file);
+      initial_pose_cov_msg_.pose.pose.position.z = getNearestHeight(initial_pose_cov_msg_.pose.pose);
+      //debug_pose_marker(initial_pose_cov_msg_.pose.pose);
+      poly_pub_.publish(poly);
+    }
+
+    ROS_INFO("Manually initialised");
   }
   else
   {
@@ -230,10 +240,8 @@ void NdtLocalizer::callback_pointcloud(
     //initial_pose_matrix = map_to_odom_matrix * odom_trans;  // local odom mode
 
     Pose tmp;
-    std::string debug;
     getXYZRPYfromMat(initial_pose_matrix, tmp);
     std::cout << "initial pose: " << "x: " << tmp.x << " y: " << tmp.y << " z: " << tmp.z << " r: " << tmp.roll << " p: " << tmp.pitch << " y: " << tmp.yaw << std::endl;
-
 
     initial_pose_matrix = odom_trans; // global odom mode
 
@@ -270,11 +278,15 @@ void NdtLocalizer::callback_pointcloud(
   const float transform_probability = ndt_.getTransformationProbability();
   const int iteration_num = ndt_.getFinalNumIteration();
 
+  Pose tmp;
+  getXYZRPYfromMat(result_pose_matrix, tmp);
+  std::cout << "ndt pose: " << "x: " << tmp.x << " y: " << tmp.y << " z: " << tmp.z << " r: " << tmp.roll << " p: " << tmp.pitch << " y: " << tmp.yaw << std::endl;
+
   bool is_converged = true;
   static size_t skipping_publish_num = 0;
-  if (
-      iteration_num >= ndt_.getMaximumIterations() + 2 ||
-      transform_probability < converged_param_transform_probability_)
+  if (is_ndt_published &&
+      (iteration_num >= ndt_.getMaximumIterations() + 2 ||
+      transform_probability < converged_param_transform_probability_))
   {
     is_converged = false;
     ++skipping_publish_num;
@@ -411,6 +423,7 @@ void NdtLocalizer::init_params()
   private_nh_.getParam("step_size", step_size);
   private_nh_.getParam("resolution", resolution);
   private_nh_.getParam("max_iterations", max_iterations);
+  private_nh_.getParam("path_file", path_file);
 
   map_frame_ = "map";
   odom_frame_ = "odom";
@@ -538,6 +551,64 @@ void NdtLocalizer::publish_tf(
 
   tf2_broadcaster_.sendTransform(transform_stamped);
 }
+
+bool NdtLocalizer::loadPath(std::string path_file)
+  {
+    std::cout << "Opening path at: " << path_file << std::endl;
+    std::ifstream csv;
+    csv.open(path_file);
+    if (csv.eof() || !csv)
+    {
+      ROS_ERROR("The file at path %s doesn't exist", path_file.c_str());
+      exit(1);
+    }
+
+    std::string line;
+    std::getline(csv, line);
+    std::string cell;
+
+    geometry_msgs::PoseStamped odom;
+    while (std::getline(csv, line))
+    {
+      std::stringstream lineStream(line);
+      std::vector<std::string> str_odom;
+
+      while (std::getline(lineStream, cell, ','))
+      {
+        str_odom.push_back(cell);
+        //std::cout << cell << ",";
+      }
+
+      geometry_msgs::Point32 p;
+      p.x = std::stof(str_odom[1]);
+      p.y = std::stof(str_odom[2]);
+      p.z = std::stof(str_odom[3]);
+
+      poly.polygon.points.push_back(p);
+    }
+
+    poly.header.frame_id = "map";
+    poly.header.seq = ros::Time::now().nsec;
+    return poly.polygon.points.empty();
+  }
+
+  double NdtLocalizer::getNearestHeight(const geometry_msgs::Pose input_init)
+  {
+    double z = 0, dist = std::numeric_limits<double>::max();
+    for (auto pose : poly.polygon.points)
+    {
+      double dx = pose.x - input_init.position.x;
+      double dy = pose.y - input_init.position.y;
+      double ddist = sqrt(dx * dx + dy * dy);
+
+      if (ddist < dist)
+      {
+        z = pose.z;
+        dist = ddist;
+      }
+    }
+    return z;
+  }
 
 int main(int argc, char **argv)
 {

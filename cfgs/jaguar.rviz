@@ -73,8 +73,6 @@ Visualization Manager:
           Value: true
         map:
           Value: true
-        odom:
-          Value: true
         os_sensor:
           Value: true
         world:
@@ -88,14 +86,6 @@ Visualization Manager:
       Show Names: true
       Tree:
         map:
-          odom:
-            base_link:
-              imu_link:
-                {}
-              os_sensor:
-                {}
-              zed2_camera_center:
-                {}
           world:
             {}
       Update Interval: 0
@@ -260,6 +250,14 @@ Visualization Manager:
         Shaft Radius: 0.10000000149011612
         Value: Arrow
       Topic: /ndt_pose
+      Unreliable: false
+      Value: true
+    - Alpha: 1
+      Class: rviz/Polygon
+      Color: 25; 255; 0
+      Enabled: true
+      Name: Polygon
+      Topic: /mapping_path
       Unreliable: false
       Value: true
   Enabled: true
