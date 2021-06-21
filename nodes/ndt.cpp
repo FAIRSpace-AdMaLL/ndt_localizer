@@ -110,7 +110,6 @@ void NdtLocalizer::callback_init_pose(
   }
   else
   {
-
     // get TF from pose_frame to map_frame
     geometry_msgs::TransformStamped::Ptr TF_pose_to_map_ptr(new geometry_msgs::TransformStamped);
     get_transform(map_frame_, initial_pose_msg_ptr->header.frame_id, TF_pose_to_map_ptr);
@@ -325,7 +324,7 @@ void NdtLocalizer::callback_pointcloud(
   else
   {
     pre_trans = result_pose_matrix;
-    deviation = delta_translation.norm();
+    deviation = 0.1; //delta_translation.norm();
   }
 
   // publish pose message
