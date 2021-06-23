@@ -2,11 +2,11 @@
     
     <!--- Sim Time -->
     <!-- <param name="/use_sim_time" default="false" /> -->
-    <arg name="input_initial_pose_topic" default="initialpose" doc="Initial position topic to align" />
+    <arg name="input_initial_pose_topic" default="/initialpose" doc="Initial position topic to align" />
     <arg name="odom_topic" default="/odometry/filtered/global" doc="robot odom topic" />
-    <arg name="submap_size_xy" default="30.0" />
+    <arg name="submap_size_xy" default="50.0" />
     <arg name="submap_size_z" default="20.0" />
-    <arg name="map_switch_thres" default="5.0" />
+    <arg name="map_switch_thres" default="25.0" />
 
     <arg name="roll" default="0.0" />
     <arg name="pitch" default="0.0" />

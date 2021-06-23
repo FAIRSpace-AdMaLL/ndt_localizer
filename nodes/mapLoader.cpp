@@ -6,6 +6,9 @@ MapLoader::MapLoader(ros::NodeHandle &nh){
     nh.param<std::string>("pcd_path", pcd_file_path, "");
     nh.param<std::string>("map_topic", map_topic, "point_map");
     nh.param<std::string>("init_pose_topic", init_pose_topic, "initialpose");
+
+    std::cout << "init_pose_topic: " << init_pose_topic << std::endl;
+
     nh.param<std::string>("robot_pose_topic", robot_pose_topic, "ndt_pose");
     nh.param<float>("submap_size_xy", submap_size_xy_, 100);
     nh.param<float>("submap_size_z", submap_size_z_, 50);
@@ -14,7 +17,7 @@ MapLoader::MapLoader(ros::NodeHandle &nh){
     init_tf_params(nh);
 
     pc_map_pub_ = nh.advertise<sensor_msgs::PointCloud2>(map_topic, 10, true);
-    initial_pose_sub_ = nh.subscribe(init_pose_topic, 100, &MapLoader::callbackInitPose, this);
+    initial_pose_sub_ = nh.subscribe(init_pose_topic, 1, &MapLoader::callbackInitPose, this);
     ndt_pose_sub_ = nh.subscribe(robot_pose_topic, 10, &MapLoader::callbackRobotPose, this);
 
     file_list_.push_back(pcd_file_path);
@@ -67,7 +70,6 @@ sensor_msgs::PointCloud2 MapLoader::switchSubmap(geometry_msgs::Pose pose) {
 
 void MapLoader::callbackInitPose(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &initial_pose_msg_ptr)
 {
-    ROS_INFO("I am here");
     curr_pose_ = initial_pose_msg_ptr->pose.pose;
     auto sub_map_msg = switchSubmap(curr_pose_);
 
@@ -77,7 +79,6 @@ void MapLoader::callbackInitPose(const geometry_msgs::PoseWithCovarianceStamped:
         ROS_INFO("submap is published!");
 	}
     pre_pose_ = curr_pose_;
-    ROS_INFO("here");
 }
 
 void MapLoader::callbackRobotPose(const nav_msgs::Odometry::ConstPtr &ndt_odom_msg)
