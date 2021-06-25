@@ -3,7 +3,7 @@
   <include file="$(find ndt_localizer)/launch/jaguar.launch" />
 
   <!-- Topics -->
-  <!-- <param name="/use_sim_time" value="true" /> -->
+  <param name="/use_sim_time" value="true" />
 
   <arg name="input_sensor_points_topic" default="/filtered_points" doc="Sensor points topic"/>
   <arg name="input_odom_topic" default="/odometry/filtered/global" doc="filtered odometry topic"/>

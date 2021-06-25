@@ -124,6 +124,15 @@ void NdtLocalizer::callback_init_pose(
     // mapTF_initial_pose_msg_ptr->header.stamp = initial_pose_msg_ptr->header.stamp;
     initial_pose_cov_msg_ = *mapTF_initial_pose_msg_ptr;
   }
+
+  nav_msgs::Odometry init_odom_msg;
+  init_odom_msg.header.stamp = initial_pose_msg_ptr->header.stamp;
+  init_odom_msg.header.frame_id = map_frame_;
+  init_odom_msg.child_frame_id = "base_link";
+  init_odom_msg.pose.pose = initial_pose_msg_ptr->pose.pose;
+
+  ndt_pose_pub_.publish(init_odom_msg);
+
   // if click the initpose again, re init！
   init_pose = false;
 }
@@ -332,6 +341,7 @@ void NdtLocalizer::callback_pointcloud(
   nav_msgs::Odometry result_pose_stamped_msg;
   result_pose_stamped_msg.header.stamp = sensor_ros_time;
   result_pose_stamped_msg.header.frame_id = map_frame_;
+  result_pose_stamped_msg.child_frame_id = "base_link";
   result_pose_stamped_msg.pose.pose = result_pose_msg;
   result_pose_stamped_msg.pose.covariance[0] = deviation;
   result_pose_stamped_msg.pose.covariance[7] = deviation;
