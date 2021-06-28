@@ -7,7 +7,7 @@
 
   <arg name="input_sensor_points_topic" default="/filtered_points" doc="Sensor points topic"/>
   <arg name="input_odom_topic" default="/odometry/filtered/global" doc="filtered odometry topic"/>
-  <arg name="input_initial_pose_topic" default="initialpose" doc="Initial position topic to align" />
+  <arg name="input_initial_pose_topic" default="/initialpose" doc="Initial position topic to align" />
   <arg name="input_map_points_topic" default="/points_map" doc="Map points topic" />
   <arg name="output_pose_topic" default="ndt_pose" doc="Estimated self position" />
   <arg name="output_pose_with_covariance_topic" default="ndt_pose_with_covariance" doc="Estimated self position with covariance" />
@@ -30,7 +30,7 @@
   <node pkg="ndt_localizer" type="ndt_localizer_node" name="ndt_localizer_node" output="screen">
 
     <remap from="points_raw" to="$(arg input_sensor_points_topic)" />
-    <remap from="initialpose" to="$(arg input_initial_pose_topic)" />
+    <param name="initialpose" value="$(arg input_initial_pose_topic)" />
     <remap from="odom" to="$(arg input_odom_topic)" />
     <remap from="pointcloud_map" to="$(arg input_map_points_topic)" />
     <remap from="ndt_pose" to="$(arg output_pose_topic)" />

@@ -2,6 +2,12 @@
     
     <!--- Sim Time -->
     <!-- <param name="/use_sim_time" default="false" /> -->
+    <arg name="input_initial_pose_topic" default="/initialpose" doc="Initial position topic to align" />
+    <arg name="odom_topic" default="/odometry/filtered/global" doc="robot odom topic" />
+    <arg name="submap_size_xy" default="50.0" />
+    <arg name="submap_size_z" default="20.0" />
+    <arg name="map_switch_thres" default="25.0" />
+
     <arg name="roll" default="0.0" />
     <arg name="pitch" default="0.0" />
     <arg name="yaw" default="0.0" />
@@ -30,6 +36,12 @@
     <node pkg="ndt_localizer" type="map_loader"    name="map_loader"    output="screen">
         <param name="pcd_path" value="$(arg pcd_path)"/>
         <param name="map_topic" value="$(arg map_topic)"/>
+        <param name="robot_pose_topic" value="$(arg odom_topic)"/>
+        <param name="init_pose_topic" value="$(arg input_initial_pose_topic)"/>
+
+        <param name="submap_size_xy" value="$(arg submap_size_xy)"/>
+        <param name="submap_size_z" value="$(arg submap_size_z)"/>
+        <param name="map_switch_thres" value="$(arg map_switch_thres)"/>
 
         <param name="roll" value="$(arg roll)" />
         <param name="pitch" value="$(arg pitch)" />
