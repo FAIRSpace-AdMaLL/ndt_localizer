@@ -24,7 +24,7 @@
   <arg name="trans_epsilon" default="0.05" doc="The maximum difference between two consecutive transformations in order to consider convergence" />
   <arg name="step_size" default="0.1" doc="The newton line search maximum step length" />
   <arg name="resolution" default="3.0" doc="The ND voxel grid resolution" />
-  <arg name="max_iterations" default="30.0" doc="The number of iterations required to calculate alignment" />
+  <arg name="max_iterations" default="50" doc="The number of iterations required to calculate alignment" />
   <arg name="converged_param_transform_probability" default="3.0" doc="" />
 
   <node pkg="ndt_localizer" type="ndt_localizer_node" name="ndt_localizer_node" output="screen">
