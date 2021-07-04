@@ -127,7 +127,12 @@ void MapLoader::createPcd()
 	}
     global_map_ptr_.reset(new pcl::PointCloud<pcl::PointXYZ>());
     pcl::fromROSMsg(pcd, *global_map_ptr_);
-    std::cout << "done!" << std::endl;
+
+    // Publish map for easy visual initialization
+    pcd.header.frame_id = "map";
+    pc_map_pub_.publish(pcd);
+
+    ROS_INFO_STREAM("done!");
 }
 
 int main(int argc, char** argv)
