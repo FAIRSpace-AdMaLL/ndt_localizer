@@ -242,26 +242,9 @@ void NdtLocalizer::callback_pointcloud(
   else
   {
     // use predicted pose as init guess
-    //initial_pose_matrix = pre_trans * delta_trans;  // linear prediction mode
+    // initial_pose_matrix = pre_trans * delta_trans;  // linear prediction mode
     //initial_pose_matrix = map_to_odom_matrix * odom_trans;  // local odom mode
-
-    Pose tmp;
-    getXYZRPYfromMat(initial_pose_matrix, tmp);
-    std::cout << "initial pose: " << "x: " << tmp.x << " y: " << tmp.y << " z: " << tmp.z << " r: " << tmp.roll << " p: " << tmp.pitch << " y: " << tmp.yaw << std::endl;
-
     initial_pose_matrix = odom_trans; // global odom mode
-
-    getXYZRPYfromMat(initial_pose_matrix, tmp);
-    std::cout << "global pose: " << "x: " << tmp.x << " y: " << tmp.y << " z: " << tmp.z << " r: " << tmp.roll << " p: " << tmp.pitch << " y: " << tmp.yaw << std::endl;
-
-    // calculate the delta tf from pre_trans to current_trans
-    Eigen::Matrix4f delta_trans2 = pre_trans.inverse() * initial_pose_matrix;
-
-    Eigen::Vector3f delta_translation2 = delta_trans2.block<3, 1>(0, 3);
-
-    Eigen::Matrix3f delta_rotation_matrix2 = delta_trans2.block<3, 3>(0, 0);
-    Eigen::Vector3f delta_euler2 = delta_rotation_matrix2.eulerAngles(2, 1, 0);
-    std::cout << "inital delta trans residual " << delta_translation2.norm() << " rotation yaw residual " << std::min(std::abs(float(M_PI)-delta_euler2(0)), std::abs(delta_euler2(0))) << std::endl;
   }
  
 
@@ -284,9 +267,9 @@ void NdtLocalizer::callback_pointcloud(
   const float transform_probability = ndt_->getTransformationProbability();
   const int iteration_num = ndt_->getFinalNumIteration();
 
-  Pose tmp;
-  getXYZRPYfromMat(result_pose_matrix, tmp);
-  std::cout << "ndt pose: " << "x: " << tmp.x << " y: " << tmp.y << " z: " << tmp.z << " r: " << tmp.roll << " p: " << tmp.pitch << " y: " << tmp.yaw << std::endl;
+  //Pose tmp;
+  //getXYZRPYfromMat(result_pose_matrix, tmp);
+  //std::cout << "ndt pose: " << "x: " << tmp.x << " y: " << tmp.y << " z: " << tmp.z << " r: " << tmp.roll << " p: " << tmp.pitch << " y: " << tmp.yaw << std::endl;
 
   bool is_converged = true;
   static size_t skipping_publish_num = 0;
@@ -302,7 +285,7 @@ void NdtLocalizer::callback_pointcloud(
   {
     skipping_publish_num = 0;
   }
-  // calculate the delta tf from pre_trans to current_trans
+  // calculate the delta tf from pre_trans to current_trans, delta_trans is mostly used in linear prediction model
   delta_trans = pre_trans.inverse() * result_pose_matrix;
 
   Eigen::Vector3f delta_translation = delta_trans.block<3, 1>(0, 3);
@@ -311,15 +294,6 @@ void NdtLocalizer::callback_pointcloud(
   Eigen::Matrix3f delta_rotation_matrix = delta_trans.block<3, 3>(0, 0);
   Eigen::Vector3f delta_euler = delta_rotation_matrix.eulerAngles(2, 1, 0);
   std::cout << "delta yaw: " << delta_euler(0) << " pitch: " << delta_euler(1) << " roll: " << delta_euler(2) << std::endl;
-
-  // calculate the delta tf from pre_trans to current_trans
-  Eigen::Matrix4f delta_trans1 = initial_pose_matrix.inverse() * result_pose_matrix;
-
-  Eigen::Vector3f delta_translation1 = delta_trans1.block<3, 1>(0, 3);
-
-  Eigen::Matrix3f delta_rotation_matrix1 = delta_trans1.block<3, 3>(0, 0);
-  Eigen::Vector3f delta_euler1 = delta_rotation_matrix1.eulerAngles(2, 1, 0);
-  std::cout << "registeration delta trans residual " << delta_translation1.norm() << " rotation yaw residual " << std::min(std::abs(float(M_PI)-delta_euler1(0)), std::abs(delta_euler1(0))) << std::endl;
 
   // define the variance of ndt localsiation
   double deviation_t, deviation_r;
