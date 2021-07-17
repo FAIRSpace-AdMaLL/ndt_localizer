@@ -3,7 +3,7 @@
   <include file="$(find ndt_localizer)/launch/jaguar.launch" />
 
   <!-- Topics -->
-  <!-- <param name="/use_sim_time" value="true" /> -->
+  <param name="/use_sim_time" value="true" />
 
   <arg name="input_sensor_points_topic" default="/filtered_points" doc="Sensor points topic"/>
   <arg name="input_odom_topic" default="/odometry/filtered/global" doc="filtered odometry topic"/>
@@ -24,7 +24,7 @@
   <arg name="trans_epsilon" default="0.05" doc="The maximum difference between two consecutive transformations in order to consider convergence" />
   <arg name="step_size" default="0.1" doc="The newton line search maximum step length" />
   <arg name="resolution" default="3.0" doc="The ND voxel grid resolution" />
-  <arg name="max_iterations" default="30.0" doc="The number of iterations required to calculate alignment" />
+  <arg name="max_iterations" default="50" doc="The number of iterations required to calculate alignment" />
   <arg name="converged_param_transform_probability" default="3.0" doc="" />
 
   <node pkg="ndt_localizer" type="ndt_localizer_node" name="ndt_localizer_node" output="screen">
@@ -45,6 +45,8 @@
     <param name="converged_param_transform_probability" value="$(arg converged_param_transform_probability)" />
   </node>
 
-  
+  <include file="$(find jaguar4x4_2014)/launch/run_bag.launch" >
+    <arg name="bag" value="/home/jaguar/beach_3_2021-06-08-18-47-12.bag --pause --clock"/>
+  </include>
 
 </launch>
