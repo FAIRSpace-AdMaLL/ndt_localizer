@@ -28,8 +28,8 @@ We use our offline version of lio-sam to build the point cloud map:
 https://github.com/FAIRSpace-AdMaLL/liosam_mapper
 
 Previously-built maps can be downloaded here: [Maps](https://drive.google.com/drive/folders/1TtTM9T1s1I-pzLHV4t07wP-gAJw3LyR7?usp=sharing)
-The court_yard data (rosbags) for mapping or testing ndt_localizer can be downloaded here: [CourtYardData](https://drive.google.com/drive/folders/11sSSurwvhftXqFAajDZNHi22Otlc323U?usp=sharing)
-The beach data (rosbags and previously-built maps) can be downloaded here: [BeachData](thttps://drive.google.com/drive/folders/1pS4aoEwj1VxV9x5Hg5HrV8soTHA3rUHa?usp=sharing)
+The court_yard data (rosbags) for mapping or testing ndt_localizer can be downloaded here: [Court Yard Data](https://drive.google.com/drive/folders/11sSSurwvhftXqFAajDZNHi22Otlc323U?usp=sharing)
+The beach data (rosbags and previously-built maps) can be downloaded here: [Beach Data](https://drive.google.com/drive/folders/1pS4aoEwj1VxV9x5Hg5HrV8soTHA3rUHa?usp=sharing)
 
 ### Setup configuration
 
