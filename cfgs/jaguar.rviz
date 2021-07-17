@@ -6,8 +6,13 @@ Panels:
       Expanded:
         - /TF1/Frames1
         - /lidar1
+        - /points_map1
+        - /points_aligned1
         - /global1/Shape1
         - /global1/Covariance1
+        - /local1
+        - /local1/Shape1
+        - /ndt_pose1
         - /ndt_pose1/Shape1
       Splitter Ratio: 0.5
     Tree Height: 728
@@ -29,7 +34,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: lidar
+    SyncSource: points_map
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -103,8 +108,8 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 5.021518707275391
-        Min Value: -2.8426103591918945
+        Max Value: 111.15750122070312
+        Min Value: 79.0030517578125
         Value: true
       Axis: Z
       Channel Name: intensity
@@ -112,7 +117,7 @@ Visualization Manager:
       Color: 255; 255; 255
       Color Transformer: AxisColor
       Decay Time: 1000
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Max Intensity: 993
@@ -129,18 +134,18 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 5.1613569259643555
-        Min Value: -3.30230975151062
+        Max Value: 36.72496032714844
+        Min Value: -4.307971954345703
         Value: true
       Axis: Z
       Channel Name: intensity
       Class: rviz/PointCloud2
       Color: 255; 255; 255
-      Color Transformer: AxisColor
+      Color Transformer: FlatColor
       Decay Time: 0
       Enabled: true
       Invert Rainbow: false
@@ -152,9 +157,9 @@ Visualization Manager:
       Position Transformer: XYZ
       Queue Size: 10
       Selectable: true
-      Size (Pixels): 3
-      Size (m): 0.009999999776482582
-      Style: Points
+      Size (Pixels): 1
+      Size (m): 0.05000000074505806
+      Style: Squares
       Topic: /points_map
       Unreliable: false
       Use Fixed Frame: true
@@ -163,15 +168,15 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 4.406217575073242
-        Min Value: -3.299682378768921
+        Max Value: 23.403383255004883
+        Min Value: -1.202394962310791
         Value: true
       Axis: Z
       Channel Name: intensity
       Class: rviz/PointCloud2
       Color: 255; 255; 255
       Color Transformer: AxisColor
-      Decay Time: 1000
+      Decay Time: 1
       Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
@@ -183,8 +188,8 @@ Visualization Manager:
       Queue Size: 10
       Selectable: true
       Size (Pixels): 3
-      Size (m): 0.05000000074505806
-      Style: Flat Squares
+      Size (m): 0.20000000298023224
+      Style: Points
       Topic: /points_aligned
       Unreliable: false
       Use Fixed Frame: true
@@ -251,9 +256,9 @@ Visualization Manager:
         Axes Radius: 0.10000000149011612
         Color: 255; 25; 0
         Head Length: 0.30000001192092896
-        Head Radius: 0.10000000149011612
+        Head Radius: 0.5
         Shaft Length: 1
-        Shaft Radius: 0.05000000074505806
+        Shaft Radius: 0.20000000298023224
         Value: Arrow
       Topic: /odometry/filtered
       Unreliable: false
@@ -285,11 +290,19 @@ Visualization Manager:
         Axes Radius: 0.10000000149011612
         Color: 237; 212; 0
         Head Length: 0.30000001192092896
-        Head Radius: 0.10000000149011612
+        Head Radius: 0.5
         Shaft Length: 1
-        Shaft Radius: 0.10000000149011612
+        Shaft Radius: 0.20000000298023224
         Value: Arrow
       Topic: /ndt_pose
+      Unreliable: false
+      Value: true
+    - Alpha: 1
+      Class: rviz/Polygon
+      Color: 25; 255; 0
+      Enabled: true
+      Name: Polygon
+      Topic: /mapping_path
       Unreliable: false
       Value: true
   Enabled: true
@@ -320,25 +333,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 116.60747528076172
+      Distance: 106.41304779052734
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 21.194673538208008
-        Y: -13.269662857055664
-        Z: 19.18877410888672
+        X: 6.498443603515625
+        Y: -4.779467582702637
+        Z: 20.2734317779541
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.8347975611686707
+      Pitch: 1.1497982740402222
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.4754018783569336
+      Yaw: 1.5704032182693481
     Saved: ~
 Window Geometry:
   Displays:
