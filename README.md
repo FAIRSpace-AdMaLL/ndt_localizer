@@ -2,7 +2,7 @@
 
 This repo is a ROS based multi-sensor robot localisation. A NDT localizer is losely-coupled with wheeled odometry and IMU for continous global localization whithin a pre-build point cloud map. 
 
-## Prerequsitis
+## Prerequisites
 You will need the [robot_localisation](http://docs.ros.org/en/melodic/api/robot_localization/html/index.html) package. The configurations of multi-sensors of our robot are detailed in `cfgs/global_ekf.yaml` and `cfgs/local_ekf.yaml`.
 
 ## Localization in a pointcloud map(pcd)
