@@ -1,9 +1,9 @@
-## A clean and simple NDT localizer
+## A ROS-based NDT localizer with multi-sensor state estimation
 
-This repo modified from Autoware lidar_localizer module. Unlike the module in Autoware with haveily dependency on a lot of packages(you need compile all the packages in Autoware project), this repo is clean, simple and with no dependencies. All you need is ROS, and a pcd file(the point cloud map). 
+This repo is a ROS based multi-sensor robot localisation. A NDT localizer is losely-coupled with wheeled odometry and IMU for continous global localization whithin a pre-build point cloud map. 
 
-Let's start our lidar-based localization learning with this simple repo!
-
+## Prerequsitis
+You will need the [robot_localisation](http://docs.ros.org/en/melodic/api/robot_localization/html/index.html) package. The configurations of multi-sensors of our robot are detailed in `cfgs/global_ekf.yaml` and `cfgs/local_ekf.yaml`.
 
 ## Localization in a pointcloud map(pcd)
 
@@ -27,9 +27,9 @@ You need a point cloud map (pcd format) for localization. You can get a HD point
 We use our offline version of lio-sam to build the point cloud map:
 https://github.com/FAIRSpace-AdMaLL/liosam_mapper
 
-Previously-built maps can be downloaded here: https://drive.google.com/drive/folders/1TtTM9T1s1I-pzLHV4t07wP-gAJw3LyR7?usp=sharing
-The court_yard data (rosbags) for mapping or testing ndt_localizer can be downloaded here: https://drive.google.com/drive/folders/11sSSurwvhftXqFAajDZNHi22Otlc323U?usp=sharing
-The beach data (rosbags and previously-built maps) can be downloaded here: https://drive.google.com/drive/folders/1pS4aoEwj1VxV9x5Hg5HrV8soTHA3rUHa?usp=sharing
+Previously-built maps can be downloaded here: [Maps](https://drive.google.com/drive/folders/1TtTM9T1s1I-pzLHV4t07wP-gAJw3LyR7?usp=sharing)
+The court_yard data (rosbags) for mapping or testing ndt_localizer can be downloaded here: [CourtYardData](https://drive.google.com/drive/folders/11sSSurwvhftXqFAajDZNHi22Otlc323U?usp=sharing)
+The beach data (rosbags and previously-built maps) can be downloaded here: [BeachData](thttps://drive.google.com/drive/folders/1pS4aoEwj1VxV9x5Hg5HrV8soTHA3rUHa?usp=sharing)
 
 ### Setup configuration
 
@@ -104,11 +104,11 @@ This operation will send a init pose to topic `/initialpose`. Then you will see 
 
 Then, play the rosbag in other terminal (e.g. `rosbag play --clock court_yard_wed_repeat_night_2021-03-03-19-07-18.bag`).
 
-The robot will start localizing:
+The robot will start localization:
 
 ![](cfgs/relocalisation.png)
 
-The final localization msg will send to `/odometry/filtered/global` as a multi-sensor fusion of wheelled odometry, IMU and lidar localisation:
+The final localization msg will send to `/odometry/filtered/global` by a multi-sensor state estimation of wheelled odometry, IMU and lidar localisation.
 
 The localizer also publish a tf of `base_link` to `map`:
 
