@@ -12,7 +12,7 @@
   <arg name="output_pose_topic" default="ndt_pose" doc="Estimated self position" />
   <arg name="output_pose_with_covariance_topic" default="ndt_pose_with_covariance" doc="Estimated self position with covariance" />
   <arg name="output_diagnostics_topic" default="diagnostics" doc="Diagnostic topic" />"
-  <arg name="path_file" default="/home/jaguar/jaguar_ws/src/ndt_localizer/map/court_yard_map.csv" doc="Mapping trajectory as height map" />
+  <arg name="path_file" default="$(find ndt_localizer)/map/court_yard_map.csv" doc="Mapping trajectory as height map" />
 
   <include file="$(find ndt_localizer)/launch/static_tf.launch" />
   <include file="$(find ndt_localizer)/launch/map_loader.launch" />
@@ -44,9 +44,5 @@
     <param name="max_iterations" value="$(arg max_iterations)" />
     <param name="converged_param_transform_probability" value="$(arg converged_param_transform_probability)" />
   </node>
-
-  <include file="$(find jaguar4x4_2014)/launch/run_bag.launch" >
-    <arg name="bag" value="/home/jaguar/beach_3_2021-06-08-18-47-12.bag --pause --clock"/>
-  </include>
 
 </launch>

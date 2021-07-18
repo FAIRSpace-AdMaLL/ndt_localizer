@@ -125,10 +125,10 @@ void NdtLocalizer::callback_init_pose(
   }
 
   nav_msgs::Odometry init_odom_msg;
-  init_odom_msg.header.stamp = initial_pose_msg_ptr->header.stamp;
+  init_odom_msg.header.stamp = initial_pose_cov_msg_.header.stamp;
   init_odom_msg.header.frame_id = map_frame_;
   init_odom_msg.child_frame_id = "base_link";
-  init_odom_msg.pose.pose = initial_pose_msg_ptr->pose.pose;
+  init_odom_msg.pose.pose = initial_pose_cov_msg_.pose.pose;
 
   ndt_pose_pub_.publish(init_odom_msg);
 
