@@ -1,9 +1,9 @@
 ## A ROS-based NDT localizer with multi-sensor state estimation
 
-This repo is a ROS based multi-sensor robot localisation. A NDT localizer is losely-coupled with wheeled odometry and IMU for continous global localization whithin a pre-build point cloud map. 
+This repo is a ROS based multi-sensor robot localisation. An NDT localizer is loosely-coupled with wheeled odometry and IMU for continuous global localization within a pre-build point cloud map. 
 
 ## Prerequisites
-You will need the [robot_localisation](http://docs.ros.org/en/melodic/api/robot_localization/html/index.html) package. The configurations of multi-sensors of our robot are detailed in `cfgs/global_ekf.yaml` and `cfgs/local_ekf.yaml`.
+You will need the [robot_localization](http://docs.ros.org/en/melodic/api/robot_localization/html/index.html) package. The configurations of multi-sensors of our robot are detailed in `cfgs/global_ekf.yaml` and `cfgs/local_ekf.yaml`.
 
 ## Localization in a pointcloud map(pcd)
 
@@ -27,9 +27,9 @@ You need a point cloud map (pcd format) for localization. You can get a HD point
 We use our offline version of lio-sam to build the point cloud map:
 https://github.com/FAIRSpace-AdMaLL/liosam_mapper
 
-Previously-built maps can be downloaded here: [Maps](https://drive.google.com/drive/folders/1TtTM9T1s1I-pzLHV4t07wP-gAJw3LyR7?usp=sharing)
+Previously-generated maps can be downloaded from [here](https://drive.google.com/drive/folders/1TtTM9T1s1I-pzLHV4t07wP-gAJw3LyR7?usp=sharing)
 The court_yard data (rosbags) for mapping or testing ndt_localizer can be downloaded here: [Court Yard Data](https://drive.google.com/drive/folders/11sSSurwvhftXqFAajDZNHi22Otlc323U?usp=sharing)
-The beach data (rosbags and previously-built maps) can be downloaded here: [Beach Data](https://drive.google.com/drive/folders/1pS4aoEwj1VxV9x5Hg5HrV8soTHA3rUHa?usp=sharing)
+The beach data (rosbags and previously-generated maps) can be downloaded here: [Beach Data](https://drive.google.com/drive/folders/1pS4aoEwj1VxV9x5Hg5HrV8soTHA3rUHa?usp=sharing)
 
 ### Setup configuration
 
@@ -94,9 +94,9 @@ source devel/setup.bash
 roslaunch ndt_localizer ndt_localizer.launch
 ```
 
-Wait a few seconds for loading map, then you can see your pcd map in rviz.
+Wait a few seconds for the map to load, then you can see your pcd map in rviz.
 
-Give a init pose of current vehicle with 2D Pose Estimate in the rviz.
+Give a initial pose of current vehicle with 2D Pose Estimate in the rviz.
 
 This operation will send a init pose to topic `/initialpose`. Then you will see the localization result:
 
@@ -108,7 +108,7 @@ The robot will start localization:
 
 ![](cfgs/relocalisation.png)
 
-The final localization msg will send to `/odometry/filtered/global` by a multi-sensor state estimation of wheelled odometry, IMU and lidar localisation.
+The final localization msg will send to `/odometry/filtered/global` by a multi-sensor state estimation using wheeled odometry, IMU and lidar localisation.
 
 The localizer also publish a tf of `base_link` to `map`:
 
