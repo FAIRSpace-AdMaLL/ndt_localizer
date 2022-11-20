@@ -27,7 +27,7 @@ NdtLocalizer::NdtLocalizer(ros::NodeHandle &nh, ros::NodeHandle &private_nh) : n
 
 NdtLocalizer::~NdtLocalizer() {}
 
-void NdtLocalizer::getXYZRPYfromMat(const Eigen::Matrix4f mat, Pose &p)
+void NdtLocalizer::getXYZRPYfromMat(const Eigen::Matrix4f mat, PoseDebug &p)
 {
   Eigen::Vector3f translation = mat.block<3, 1>(0, 3);
 
@@ -174,6 +174,8 @@ void NdtLocalizer::callback_pointsmap(
 
 void NdtLocalizer::callback_odom(const nav_msgs::Odometry::ConstPtr &odom_msg)
 {
+  std::lock_guard<std::mutex> odom_lock(odom_mtx_);
+
   if(is_ndt_published) {
     geometry_msgs::Pose odom_pose_msg = odom_msg->pose.pose;
 
@@ -181,6 +183,17 @@ void NdtLocalizer::callback_odom(const nav_msgs::Odometry::ConstPtr &odom_msg)
     odom_trans.block<3, 1>(0, 3) = t;
     Eigen::Quaternionf q(odom_pose_msg.orientation.w, odom_pose_msg.orientation.x, odom_pose_msg.orientation.y, odom_pose_msg.orientation.z);
     odom_trans.block<3, 3>(0, 0) = q.toRotationMatrix();
+
+    RobotPoseStampted pose_stampted;
+    pose_stampted.pose.x = odom_pose_msg.position.x;
+    pose_stampted.pose.y = odom_pose_msg.position.y;
+    pose_stampted.pose.z = odom_pose_msg.position.z;
+    pose_stampted.pose.qx = odom_pose_msg.orientation.x;
+    pose_stampted.pose.qy = odom_pose_msg.orientation.y;
+    pose_stampted.pose.qz = odom_pose_msg.orientation.z;
+    pose_stampted.pose.qw = odom_pose_msg.orientation.w;
+    pose_stampted.time_stamp = odom_msg->header.stamp.toSec();;
+    synchronizer_->insertPose(pose_stampted);
   }
 }
 
@@ -233,7 +246,7 @@ void NdtLocalizer::callback_pointcloud(
     tf2::fromMsg(initial_pose_cov_msg_.pose.pose, initial_pose_affine);
     initial_pose_matrix = initial_pose_affine.matrix().cast<float>();
 
-    Pose tmp;
+    PoseDebug tmp;
     getXYZRPYfromMat(initial_pose_matrix, tmp);
     std::cout << "manual initial pose: " << "x: " << tmp.x << " y: " << tmp.y << " z: " << tmp.z << " r: " << tmp.roll << " p: " << tmp.pitch << " y: " << tmp.yaw << std::endl;
 
@@ -254,6 +267,21 @@ void NdtLocalizer::callback_pointcloud(
     // initial_pose_matrix = pre_trans * delta_trans;  // linear prediction mode
     //initial_pose_matrix = map_to_odom_matrix * odom_trans;  // local odom mode
     initial_pose_matrix = odom_trans; // global odom mode
+    RobotPoseStampted odom_pose;
+
+    if(synchronizer_->synchronize(odom_pose, sensor_ros_time.toSec())) {
+      ROS_INFO("sync succeed");
+      Eigen::Vector3f t(odom_pose.pose.x, odom_pose.pose.y, odom_pose.pose.z);
+      odom_trans.block<3, 1>(0, 3) = t;
+      Eigen::Quaternionf q(odom_pose.pose.qw, odom_pose.pose.qx, odom_pose.pose.qy, odom_pose.pose.qz);
+      odom_trans.block<3, 3>(0, 0) = q.toRotationMatrix();
+    }
+    else {
+      ROS_ERROR("sync failed");
+      return;
+    }
+
+    initial_pose_matrix = odom_trans;
   }
  
 
@@ -408,6 +436,9 @@ void NdtLocalizer::init_params()
 
   private_nh_.getParam("base_frame", base_frame_);
   ROS_INFO("base_frame_id: %s", base_frame_.c_str());
+
+  // init synchronizer with queue size of 100.
+  synchronizer_ = std::make_shared<Synchronizer> (100);
 
   ndt_ = new pcl::NormalDistributionsTransform<pcl::PointXYZ, pcl::PointXYZ>;
 

@@ -56,8 +56,8 @@ add_dependencies(voxel_grid_filter ${catkin_EXPORTED_TARGETS})
 
 target_link_libraries(voxel_grid_filter ${catkin_LIBRARIES})
 
-add_executable(map_loader nodes/mapLoader.cpp)
+add_executable(map_loader nodes/map_loader.cpp)
 target_link_libraries(map_loader ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
-add_executable(ndt_localizer_node nodes/ndt.cpp)
+add_executable(ndt_localizer_node nodes/ndt.cpp nodes/synchronizer.cpp)
 target_link_libraries(ndt_localizer_node ${catkin_LIBRARIES} ${PCL_LIBRARIES})

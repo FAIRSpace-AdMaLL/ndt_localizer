@@ -29,14 +29,8 @@
 #include <pcl_ros/point_cloud.h>
 #include <pcl_ros/transforms.h>
 
-struct Pose {
-    double x;
-    double y;
-    double z;
-    double roll;
-    double pitch;
-    double yaw;
-};
+#include "common.h"
+#include "synchronizer.h"
 
 class NdtLocalizer{
 public:
@@ -60,6 +54,7 @@ private:
     ros::Publisher diagnostics_pub_;
     ros::Publisher poly_pub_;
 
+    std::shared_ptr<Synchronizer> synchronizer_{nullptr};
     pcl::NormalDistributionsTransform<pcl::PointXYZ, pcl::PointXYZ> *ndt_;
 
     tf2_ros::Buffer tf2_buffer_;
@@ -83,6 +78,7 @@ private:
     geometry_msgs::PoseWithCovarianceStamped initial_pose_cov_msg_;
 
     std::mutex ndt_map_mtx_;
+    std::mutex odom_mtx_;
 
     double converged_param_transform_probability_;
     std::thread diagnostic_thread_;
@@ -106,7 +102,7 @@ private:
     void callback_pointcloud(const sensor_msgs::PointCloud2::ConstPtr & pointcloud2_msg_ptr);
     void callback_odom(const nav_msgs::Odometry::ConstPtr & odom_msg_ptr);
 
-    void getXYZRPYfromMat(const Eigen::Matrix4f mat, Pose & p);
+    void getXYZRPYfromMat(const Eigen::Matrix4f mat, PoseDebug& p);
     double getNearestHeight(const geometry_msgs::Pose p);
     bool loadPath(std::string path);
 

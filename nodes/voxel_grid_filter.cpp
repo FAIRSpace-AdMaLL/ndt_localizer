@@ -72,7 +72,7 @@ static void scan_callback(const sensor_msgs::PointCloud2::ConstPtr& input)
     extract.setInputCloud(filtered_scan_ptr);
     extract.setIndices(front_index);
     extract.setNegative(true);
-    //extract.filter(*filtered_scan_ptr);
+    extract.filter(*filtered_scan_ptr);
 
     ROS_INFO("after filtering %i", (*filtered_scan_ptr).size()); 
 

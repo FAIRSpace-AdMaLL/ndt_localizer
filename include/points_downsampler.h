@@ -1,3 +1,5 @@
+#pragma once
+
 #ifndef POINTS_DOWNSAMPLER_H
 #define POINTS_DOWNSAMPLER_H
 

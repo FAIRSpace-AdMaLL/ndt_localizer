@@ -1,3 +1,4 @@
+#pragma once
 #ifndef _MAP_LOADER_H_
 #define _MAP_LOADER_H_
 

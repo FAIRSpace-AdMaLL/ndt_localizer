@@ -1,3 +1,5 @@
+  #pragma once
+  
   #include<ndt.h>
   
   void debugPoseMarker(geometry_msgs::Pose p)
